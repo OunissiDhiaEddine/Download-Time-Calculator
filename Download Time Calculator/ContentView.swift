@@ -1,93 +1,144 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var downloadSize = ""
-    @State private var downloadSpeed = ""
-    @State private var result = ""
-    @State private var isSizeInGB = false
-    
-    var body: some View {
-        VStack {
-            Text("Download Calculator")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding(.bottom, 20)
-            
-            HStack {
-                Text("Size:")
-                    .font(.headline)
-                    .padding()
-                
-                TextField("Enter size", text: $downloadSize)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.decimalPad)
-                    .padding(.trailing)
-                
-                Toggle("GB", isOn: $isSizeInGB)
-                    .labelsHidden()
-                    .padding()
-                
-                Text("Unit: \(isSizeInGB ? "GB" : "MB")")
-                    .foregroundColor(.gray)
-                    .font(.caption)
-                    .padding(.leading)
-            }
-            
-            HStack {
-                Text("Speed:")
-                    .font(.headline)
-                    .padding()
-                
-                TextField("Enter speed in Mbps", text: $downloadSpeed)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.decimalPad)
-                    .padding()
-            }
-            
-            Button("Calculate") {
-                calculateDownloadTime()
-            }
-            .font(.headline)
-            .foregroundColor(.white)
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.orange)
-            .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.white, lineWidth: 2)
-            )
-            .padding()
-        
-            Text(result)
-                .font(.body)
-                .padding()
-        }
-        .padding()
-        .background(
-            Image("Background")
-                .scaledToFill()
-                .edgesIgnoringSafeArea(.all)
-        )
+    @StateObject private var viewModel = DownloadViewModel()
+    @FocusState private var focusedField: Field?
+
+    enum Field {
+        case size, speed
     }
-    
-    private func calculateDownloadTime() {
-        guard let size = Double(downloadSize),
-              let speed = Double(downloadSpeed) else {
-            result = "Invalid input"
-            return
+
+    var body: some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                colors: [
+                    Color(.systemIndigo),
+                    Color(.systemPurple),
+                    Color(.systemPink)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    header
+
+                    card
+                }
+                .padding()
+            }
         }
+        .onTapGesture {
+            focusedField = nil
+        }
+    }
 
-        let sizeInMegabytes = isSizeInGB ? size * 1024 : size
-        let timeInSeconds = sizeInMegabytes / speed * 8
-        let timeInMinutes = timeInSeconds / 60
+    private var header: some View {
+        VStack(spacing: 6) {
+            Label("Download Time", systemImage: "arrow.down.circle.fill")
+                .font(.largeTitle.bold())
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.white)
+            Text("Estimate how long a download will take based on file size and your network speed.")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.9))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top, 8)
+        .accessibilityElement(children: .combine)
+    }
 
-        result = String(format: "Download Time: %.2f minutes", timeInMinutes)
+    private var card: some View {
+        VStack(spacing: 16) {
+            // Unit base toggle (1000 vs 1024)
+            HStack {
+                Label("Unit base", systemImage: "scalemass")
+                    .font(.headline)
+                Spacer()
+                Picker("Unit Base", selection: $viewModel.useBinary) {
+                    Text("1000 (MB/GB)").tag(false)
+                    Text("1024 (MiB/GiB)").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 280)
+            }
+
+            // Size input
+            InputRow(
+                title: "Size",
+                systemImage: "doc.fill",
+                placeholder: "Enter file size",
+                text: $viewModel.sizeText
+            ) {
+                SizeUnitPicker(selection: $viewModel.sizeUnit)
+            }
+            .focused($focusedField, equals: .size)
+            .keyboardType(.decimalPad)
+
+            // Speed input
+            InputRow(
+                title: "Speed",
+                systemImage: "bolt.fill",
+                placeholder: "Enter speed",
+                text: $viewModel.speedText
+            ) {
+                RateUnitPicker(selection: $viewModel.rateUnit)
+            }
+            .focused($focusedField, equals: .speed)
+            .keyboardType(.decimalPad)
+
+            if let error = viewModel.errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.yellow)
+                    Text(error)
+                        .foregroundStyle(.secondary)
+                        .font(.footnote)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel("Error: \(error)")
+            }
+
+            Button(action: {
+                viewModel.calculate()
+                focusedField = nil
+            }) {
+                Label("Calculate", systemImage: "equal.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(viewModel.isCalculateEnabled ? Color.orange : Color.gray.opacity(0.5))
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .disabled(!viewModel.isCalculateEnabled)
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+
+            ResultCard(
+                hms: viewModel.resultHMS,
+                long: viewModel.resultLong
+            )
+            .opacity(viewModel.hasResult ? 1 : 0.3)
+        }
+        .padding(20)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+        )
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }
+            }
+        }
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
+#Preview {
+    ContentView()
 }

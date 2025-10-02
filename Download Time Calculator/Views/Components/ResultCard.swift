@@ -1,3 +1,11 @@
+//
+//  ResultCard.swift
+//  Download Time Calculator
+//
+//  Created by Dhia Eddine Ounissi on 2025-10-02.
+//
+
+
 import SwiftUI
 
 struct ResultCard: View {
