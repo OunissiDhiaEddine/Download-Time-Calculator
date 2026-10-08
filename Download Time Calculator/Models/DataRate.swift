@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct DataRate {
+struct DataRate: Sendable {
     let value: Double
     let unit: DataRateUnit
 

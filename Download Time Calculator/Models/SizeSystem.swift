@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum SizeSystem: String, CaseIterable, Identifiable {
+enum SizeSystem: String, CaseIterable, Identifiable, Sendable {
     case decimal // 1000-based (MB, GB, TB)
     case binary  // 1024-based (MiB, GiB, TiB)
 

@@ -10,7 +10,7 @@ import Foundation
 
 enum DurationFormatter {
     static func hmsString(seconds: TimeInterval) -> String {
-        guard seconds.isFinite, seconds >= 0 else { return "—" }
+        guard seconds.isFinite, seconds >= 0, seconds < 1e12 else { return "—" }
         let total = Int(seconds.rounded(.toNearestOrAwayFromZero))
         let hours = total / 3600
         let minutes = (total % 3600) / 60
@@ -23,7 +23,7 @@ enum DurationFormatter {
     }
 
     static func longString(seconds: TimeInterval) -> String {
-        guard seconds.isFinite, seconds >= 0 else { return "—" }
+        guard seconds.isFinite, seconds >= 0, seconds < 1e12 else { return "—" }
         let total = Int(seconds.rounded(.toNearestOrAwayFromZero))
         let days = total / 86_400
         let hours = (total % 86_400) / 3600
