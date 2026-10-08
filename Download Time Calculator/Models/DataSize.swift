@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct DataSize {
+struct DataSize: Sendable {
     let value: Double
     let unit: DataSizeUnit
     let system: SizeSystem
