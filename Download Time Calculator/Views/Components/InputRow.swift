@@ -18,8 +18,9 @@ struct InputRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.tint)
                 .font(.title3)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
@@ -29,15 +30,13 @@ struct InputRow<Trailing: View>: View {
                     TextField(placeholder, text: $text)
                         .textFieldStyle(.roundedBorder)
                         .keyboardType(.decimalPad)
+                        .accessibilityLabel(title)
 
                     trailing()
                 }
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemBackground).opacity(0.6))
-        )
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
